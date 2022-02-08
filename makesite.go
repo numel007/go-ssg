@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"text/template"
+
+	"github.com/gomarkdown/markdown"
 )
 
 func check(e error) {
@@ -18,12 +20,13 @@ type Bullshit struct {
 	Data string
 }
 
-// type Page struct {
-// 	TextFilePath string
-// 	TextFileName string
-// 	HTMLFilePath string
-// 	Content      string
-// }
+func createHTML(data string, outputName string) {
+	newStruct := Bullshit{Data: data}
+	parsedTemplate, _ := template.ParseFiles("template.tmpl")
+	newFile, _ := os.Create(outputName)
+	err := parsedTemplate.Execute(newFile, newStruct)
+	check(err)
+}
 
 func main() {
 	// inputFile := flag.String("file", "first-post.txt", "txt file to pass in")
@@ -31,29 +34,25 @@ func main() {
 	flag.Parse()
 
 	if *inputDir != " " {
-		println("Converting all txt files in " + *inputDir + "/")
+		println("Converting all .txt & .md files in " + *inputDir + "/")
 		files, fileError := ioutil.ReadDir(*inputDir)
 		check(fileError)
 
 		for _, file := range files {
-			if file.IsDir() {
-			} else {
+			if file.Mode().IsRegular() {
 				fileNameArray := strings.Split(file.Name(), ".")
+				outputName := strings.Split(file.Name(), ".")[0] + ".html"
+
 				if fileNameArray[len(fileNameArray)-1] == "txt" {
-					outputName := strings.Split(file.Name(), ".")[0] + ".html"
 					data, _ := ioutil.ReadFile(file.Name())
 
-					myStruct := Bullshit{Data: string(data)}
+					createHTML(string(data), outputName)
 
-					// Use a defined template
-					parsedTemplate, _ := template.ParseFiles("template.tmpl")
+				} else if fileNameArray[len(fileNameArray)-1] == "md" {
+					mdData, _ := ioutil.ReadFile(file.Name())
+					mdDataConverted := string(markdown.ToHTML(mdData, nil, nil))
 
-					// Create a file to write to
-					newFile, _ := os.Create(outputName)
-
-					// Write to new file using template and data
-					err := parsedTemplate.Execute(newFile, myStruct)
-					check(err)
+					createHTML(mdDataConverted, outputName)
 				}
 			}
 		}
